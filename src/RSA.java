@@ -1,11 +1,19 @@
 import java.math.BigInteger;
 import java.security.SecureRandom;
+import java.util.ArrayList;
 
 public class RSA {
-	private static final int BITLEN = 100;
-	private static final BigInteger ZERO = BigInteger.ZERO;
-	private static final BigInteger ONE = BigInteger.ONE;
-	private static final BigInteger TWO = BigInteger.TWO;
+	public static final int BITLEN = 1024;
+	public static final BigInteger ZERO = BigInteger.ZERO;
+	public static final BigInteger ONE = BigInteger.ONE;
+	public static final BigInteger TWO = BigInteger.TWO;
+
+	BigInteger p;
+	BigInteger q;
+	BigInteger n;
+	BigInteger z;
+	BigInteger e;
+	BigInteger d;
 
 	public BigInteger getRandomNumber() {
 		SecureRandom sr = new SecureRandom();
@@ -14,6 +22,9 @@ public class RSA {
 	}
 
 	public boolean testMillerRabin(BigInteger number) {
+		if (number.equals(ZERO))
+			return false;
+
 		SecureRandom sr = new SecureRandom();
 		BigInteger previous = number.subtract(ONE);
 		BigInteger rest = previous;
@@ -21,7 +32,6 @@ public class RSA {
 		int k = 8;
 
 		// Procura m e w para satisfazer (number - 1) = (2^w) * m
-		System.out.println(number);
 		while (rest.mod(TWO).equals(ZERO)) {
 			rest = rest.divide(TWO);
 			power++;
@@ -49,5 +59,60 @@ public class RSA {
 			}
 		}
 		return true;
+	}
+
+	public BigInteger generatePrimeNumber() {
+		BigInteger result = ZERO;
+		while (!testMillerRabin(result))
+			result = getRandomNumber();
+		return result;
+	}
+
+	public void calculateKeys() {
+		p = generatePrimeNumber();
+		q = generatePrimeNumber();
+
+		n = p.multiply(q);
+
+		BigInteger factor1 = p.subtract(RSA.ONE);
+		BigInteger factor2 = q.subtract(RSA.ONE);
+		z = factor1.multiply(factor2);
+
+		e = RSA.TWO.add(RSA.ONE);
+		while (z.gcd(e).intValue() > 1) {
+			e = e.add(RSA.TWO);
+		}
+
+		d = e.modInverse(z);
+		System.out.println("p: " + p);
+		System.out.println("q: " + q);
+		System.out.println("n: " + n);
+		System.out.println("z: " + z);
+		System.out.println("e: " + e);
+		System.out.println("d: " + d + "\n");
+	}
+
+	public ArrayList<BigInteger> encript(String str) {
+		ArrayList<BigInteger> cipherText = new ArrayList<BigInteger>();
+		byte[] characters = str.getBytes();
+
+		for (int i = 0; i < characters.length; i++) {
+			byte[] fakeArray = new byte[] { characters[i] };
+			cipherText.add(new BigInteger(fakeArray).modPow(e, n));
+		}
+
+		System.out.println("Mensagem cifrada (por caracter): " + cipherText);
+		System.out.println("Mensagem cifrada (só números): " + cipherText.toString().replaceAll(", ", "").substring(1));
+
+		return cipherText;
+	}
+
+	public String decript(ArrayList<BigInteger> cipherText) {
+		StringBuilder result = new StringBuilder("");
+		for (BigInteger character : cipherText)
+			result.append((char) character.modPow(d, n).intValue());
+
+		System.out.println("Mensagem decifrada: " + result.toString());
+		return result.toString();
 	}
 }
